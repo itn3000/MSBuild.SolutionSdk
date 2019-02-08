@@ -42,14 +42,14 @@ namespace MSBuild.SolutionSdk.Tasks
                 var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
                 Log.LogMessage("project num = {0}", Projects.Length);
                 var configurations = new string[] { "Debug", "Release" };
-                var platforms = new string[] { "AnyCPU" };
+                var platforms = new string[] { "Any CPU", "x86", "x64" };
                 var projects = Projects.Select(proj =>
                 {
                     var guid = Guid.NewGuid();
                     var typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
                     Log.LogMessage("typeguid={0}", typeguid);
                     return new SlnProject(
-                        Path.GetFullPath(proj.ItemSpec),
+                        proj.ItemSpec,
                         Path.GetFileNameWithoutExtension(proj.ItemSpec),
                         guid,
                         typeguid,
