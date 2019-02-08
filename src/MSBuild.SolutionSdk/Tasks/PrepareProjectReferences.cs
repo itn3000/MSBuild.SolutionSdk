@@ -31,6 +31,8 @@ namespace MSBuild.SolutionSdk.Tasks
 
             public bool HasDependencies => DependsOn != "";
 
+            bool _isUsingMicrosoftNETSdk;
+
             public ProjectNode(ITaskItem projectItem, int originalOrder)
             {
                 DependentProjects = new List<ProjectNode>();
@@ -49,9 +51,11 @@ namespace MSBuild.SolutionSdk.Tasks
             {
                 if (!projectMetadata.GetMetadata("UsingMicrosoftNETSdk").Equals("true", StringComparison.OrdinalIgnoreCase))
                 {
+                    _isUsingMicrosoftNETSdk = false;
                     SkipProject = string.IsNullOrEmpty(projectMetadata.GetMetadata("OutputPath"));
                     return;
                 }
+                _isUsingMicrosoftNETSdk = true;
 
                 var supportedConfigurations = projectMetadata
                     .GetMetadata("Configurations")
@@ -72,6 +76,8 @@ namespace MSBuild.SolutionSdk.Tasks
                 item.SetMetadata("Properties", $"Configuration={ActiveConfiguration};Platform={ActivePlatform}");
                 item.SetMetadata("AdditionalProperties", ProjectItem.GetMetadata("AdditionalProperties"));
                 item.SetMetadata("BuildOrder", buildOrder.ToString());
+                var usingNetSdk = ProjectItem.GetMetadata("UsingMicrosoftNETSdk");
+                item.SetMetadata("UsingMicrosoftNETSdk", _isUsingMicrosoftNETSdk ? "true" : "false");
                 return item;
             }
         }

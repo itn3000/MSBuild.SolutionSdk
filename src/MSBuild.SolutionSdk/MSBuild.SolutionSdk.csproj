@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="15.8.166" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.Build" Version="15.8.166" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>
