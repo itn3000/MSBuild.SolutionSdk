@@ -18,6 +18,11 @@ namespace MSBuild.SolutionSdk.Tasks
         public ITaskItem ProjectDirectory { get; set; }
         [Required]
         public ITaskItem[] ProjectMetaData { get; set; }
+        // [Required]
+        public ITaskItem[] Configurations { get; set; }
+        // [Required]
+        public ITaskItem[] Platforms { get; set; }
+        public ITaskItem[] AdditionalProperties { get; set; }
         public override bool Execute()
         {
             if (ProjectName == null)
@@ -43,6 +48,14 @@ namespace MSBuild.SolutionSdk.Tasks
                 Log.LogMessage("project num = {0}", Projects.Length);
                 var configurations = new string[] { "Debug", "Release" };
                 var platforms = new string[] { "Any CPU", "x86", "x64" };
+                if(Platforms != null && Platforms.Length != 0)
+                {
+                    platforms = Platforms.Select(x => x.ItemSpec).ToArray();
+                }
+                if(Configurations != null && Configurations.Length != 0)
+                {
+                    configurations = Configurations.Select(x => x.ItemSpec).ToArray();
+                }
                 var projects = Projects.Select(proj =>
                 {
                     var guid = Guid.NewGuid();
