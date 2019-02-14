@@ -31,6 +31,9 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// </summary>
         private readonly List<string> _solutionItems = new List<string>();
 
+        private Dictionary<Guid, Dictionary<string, string>> _configurationMap = new Dictionary<Guid, Dictionary<string, string>>();
+        private Dictionary<Guid, Dictionary<string, string>> _platformMap = new Dictionary<Guid, Dictionary<string, string>>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SlnFile" /> class.
         /// </summary>
@@ -62,6 +65,21 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         public void AddProjects(IEnumerable<SlnProject> projects)
         {
             _projects.AddRange(projects);
+        }
+
+        public void UpdateConfigurationMap(IEnumerable<KeyValuePair<Guid, Dictionary<string, string>>> configurationMap)
+        {
+            foreach(var map in configurationMap)
+            {
+                _configurationMap[map.Key] = map.Value;
+            }
+        }
+        public void UpdatePlatformMap(IEnumerable<KeyValuePair<Guid, Dictionary<string, string>>> maps)
+        {
+            foreach(var map in maps)
+            {
+                _platformMap[map.Key] = map.Value;
+            }
         }
 
         /// <summary>
@@ -161,6 +179,12 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
                     {
                         if (!string.IsNullOrWhiteSpace(configuration) && !string.IsNullOrWhiteSpace(platform))
                         {
+                            // string projectConfiguration;
+                            // if(_configurationMap.ContainsKey(project.ProjectGuid) && _configurationMap[project.ProjectGuid].ContainsValue(configuration))
+                            // {
+                            //     projectConfiguration = _configurationMap[project.ProjectGuid].First(x => x.)
+                            // }
+                            // string projectPlatform;
                             writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{configuration}|{platform}.ActiveCfg = {configuration}|{platform}");
                             writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{configuration}|{platform}.Build.0 = {configuration}|{platform}");
                         }

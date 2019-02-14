@@ -77,6 +77,9 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 
         public Guid ProjectTypeGuid { get; }
 
+        public Dictionary<string, string> ConfigurationMap { get; }
+        public Dictionary<string, string> PlatformMap { get; }
+
         
         public static SlnProject FromProject(Project project,  IReadOnlyDictionary<string, Guid> customProjectTypeGuids, bool isMainProject = false)
         {

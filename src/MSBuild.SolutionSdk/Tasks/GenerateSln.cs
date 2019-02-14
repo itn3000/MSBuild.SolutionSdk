@@ -23,6 +23,18 @@ namespace MSBuild.SolutionSdk.Tasks
         // [Required]
         public ITaskItem[] Platforms { get; set; }
         public ITaskItem[] AdditionalProperties { get; set; }
+        static Dictionary<string, string> ExtractMap(string str, char delimiterElement, char delimiterKeyValue)
+        {
+            if(string.IsNullOrEmpty(str))
+            {
+                return new Dictionary<string, string>();
+            }
+            return str.Split(delimiterElement)
+                .Select(x => x.Split(new char[1]{ delimiterKeyValue }, 2))
+                .Where(x => x.Length == 2)
+                .ToDictionary(x => x[0], x => x[1])
+                ;
+        }
         public override bool Execute()
         {
             if (ProjectName == null)
@@ -56,20 +68,38 @@ namespace MSBuild.SolutionSdk.Tasks
                 {
                     configurations = Configurations.Select(x => x.ItemSpec).ToArray();
                 }
+                var projectConfigurationMap = new Dictionary<Guid, Dictionary<string, string>>();
+                var projectPlatformMap = new Dictionary<Guid, Dictionary<string, string>>();
                 var projects = Projects.Select(proj =>
                 {
                     var guid = Guid.NewGuid();
                     var typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
                     Log.LogMessage("typeguid={0}", typeguid);
+                    var configurationMap = ExtractMap(proj.GetMetadata("ConfigurationMap"), ';', '=');
+                    if(configurationMap != null && configurationMap.Count != 0)
+                    {
+                        projectConfigurationMap[guid] = configurationMap;
+                    }
+                    var platformMap = ExtractMap(proj.GetMetadata("PlatformMap"), ';', '=');
+                    if(platformMap != null && platformMap.Count != 0)
+                    {
+                        projectPlatformMap[guid] = platformMap;
+                    }
+                    var projectConfigurations = configurations.Select(x => configurationMap.ContainsKey(x) ? configurationMap[x] : x)
+                        .OrderBy(x => x).Distinct().ToArray();
+                    var projectPlatforms = platforms.Select(x => platformMap.ContainsKey(x) ? platformMap[x] : x)
+                        .OrderBy(x => x).Distinct().ToArray();
                     return new SlnProject(
                         proj.ItemSpec,
                         Path.GetFileNameWithoutExtension(proj.ItemSpec),
                         guid,
                         typeguid,
-                        configurations,
-                        platforms,
+                        projectConfigurations,
+                        projectPlatforms,
                         false);
                 });
+                slnFile.UpdateConfigurationMap(projectConfigurationMap);
+                slnFile.UpdatePlatformMap(projectPlatformMap);
                 slnFile.AddProjects(projects);
                 slnFile.Save(Path.Combine(ProjectDirectory.ItemSpec, slnFileName), false);
                 foreach (var proj in Projects)
