@@ -103,7 +103,6 @@ namespace MSBuild.SolutionSdk.Tasks
             for (var i = 0; i < Projects.Length; i++)
             {
                 var project = Projects[i];
-                Log.LogMessage("metadatanames={0}", string.Join("|", project.MetadataNames.Cast<string>()));
                 var node = new ProjectNode(project, i);
 
                 if (node.DependsOn != "")

@@ -24,6 +24,9 @@
       <Platform>$(_Platform)</Platform>
       <AdditionalProperties>$(AdditionalProperties)</AdditionalProperties>
     </Project>
+    <SolutionItems>
+      <FolderName>Solution Items</FolderName>
+    </SolutionItems>
   </ItemDefinitionGroup>
 
   <ItemGroup Condition="'$(EnableDefaultProjectItems)' == 'true'">

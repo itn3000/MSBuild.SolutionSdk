@@ -4,7 +4,7 @@
   <PropertyGroup>
     <SolutionSdkTasksAssembly>$(MSBuildThisFileDirectory)..\..\src\bin\Debug\MSBuild.SolutionSdk.dll</SolutionSdkTasksAssembly>
     <SolutionConfigurations>Debug;Release</SolutionConfigurations>
-    <!-- <SolutionPlatforms>Any CPU;x86;x64</SolutionPlatforms> -->
+    <SolutionPlatforms>Any CPU;x86;x64</SolutionPlatforms>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -13,10 +13,18 @@
 
   <ItemGroup>
     <Project Update="lib1/lib1.csproj">
-      <ConfigurationMap>Hoge=Debug</ConfigurationMap>
+      <ConfigurationMap>Debug=Hoge</ConfigurationMap>
       <Configurations>Debug;Release;Hoge</Configurations>
+      <Platforms>Any CPU</Platforms>
     </Project>
+    <SolutionItem Include="**/*.txt" Exclude="**/obj/**/*.txt;**/bin/**/*.txt">
+      <FolderName>solutionfolder</FolderName>
+    </SolutionItem>
   </ItemGroup>
+
+  <Target Name="OutputSolutionItems">
+    <Message Importance="Normal" Text="solutionitems is @(SolutionItem)"/>
+  </Target>
 
   <Import Project="..\..\src\MSBuild.SolutionSdk\Sdk\Sdk.targets" />
 </Project>

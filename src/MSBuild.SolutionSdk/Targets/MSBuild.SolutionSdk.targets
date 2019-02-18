@@ -66,7 +66,7 @@
 
   </Target>
   <UsingTask TaskName="MSBuild.SolutionSdk.Tasks.GenerateSln" AssemblyFile="$(SolutionSdkTasksAssembly)"/>
-  <Target Name="SlnGen" Inputs="@(_ProjectReference)" Outputs="$(MSBuildProjectDirectory)/$(MSBuildProjectName)">
+  <Target Name="SlnGen">
     <GenerateSln Projects="@(_ProjectReference)" 
       ProjectName="$(MSBuildProjectName)"
       ProjectDirectory="$(MSBuildProjectDirectory)"
@@ -74,6 +74,7 @@
       Configurations="$(SolutionConfigurations)"
       Platforms="$(SolutionPlatforms)"
       AdditionalProperties="$(AdditionalProperties)"
+      SolutionItems="@(SolutionItem)"
       />
       
   </Target>

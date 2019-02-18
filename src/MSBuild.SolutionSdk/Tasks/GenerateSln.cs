@@ -23,6 +23,7 @@ namespace MSBuild.SolutionSdk.Tasks
         // [Required]
         public ITaskItem[] Platforms { get; set; }
         public ITaskItem[] AdditionalProperties { get; set; }
+        public ITaskItem[] SolutionItems { get; set; }
         static Dictionary<string, string> ExtractMap(string str, char delimiterElement, char delimiterKeyValue)
         {
             if (string.IsNullOrEmpty(str))
@@ -53,6 +54,14 @@ namespace MSBuild.SolutionSdk.Tasks
             {
                 Log.LogMessage($"ProjectDirectory is {ProjectDirectory.ItemSpec}");
             }
+            if(SolutionItems != null)
+            {
+                Log.LogMessage("solutionItems = {0}", string.Join("|", SolutionItems.Select(x => x.ItemSpec)));
+            }
+            else
+            {
+                Log.LogMessage("solutionItems is null");
+            }
             if (Projects != null)
             {
                 Log.LogMessage("project num = {0}", Projects.Length);
@@ -66,6 +75,9 @@ namespace MSBuild.SolutionSdk.Tasks
                 {
                     configurations = Configurations.Select(x => x.ItemSpec).ToArray();
                 }
+                Log.LogMessage("configurations='{0}', platforms='{1}'",
+                    string.Join(";", configurations),
+                    string.Join(";", platforms));
                 var slnFile = new SlnFile("12.0", configurations, platforms);
                 var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
                 var configurationMap = new Dictionary<string, string>();
@@ -97,8 +109,8 @@ namespace MSBuild.SolutionSdk.Tasks
                         projectPlatforms = platforms;
                     }
                     platformMap[proj.ItemSpec] = proj.GetMetadata("PlatformMap");
-                    Log.LogMessage("configurations = {0}", string.Join("|", projectConfigurations));
-                    Log.LogMessage("platforms = {0}", string.Join("|", projectPlatforms));
+                    Log.LogMessage("project configurations = {0}", string.Join("|", projectConfigurations));
+                    Log.LogMessage("project platforms = {0}", string.Join("|", projectPlatforms));
                     return new SlnProject(
                         proj.ItemSpec,
                         Path.GetFileNameWithoutExtension(proj.ItemSpec),
@@ -120,35 +132,6 @@ namespace MSBuild.SolutionSdk.Tasks
                 }
                 slnFile.AddProjects(projects);
                 slnFile.Save(Path.Combine(ProjectDirectory.ItemSpec, slnFileName), false, configurationMap, platformMap);
-                foreach (var proj in Projects)
-                {
-                    Log.LogMessage("itemspec = {0}, metadatanames = {1}", proj.ItemSpec, string.Join("|", proj.MetadataNames.Cast<string>()));
-                    foreach (var metaDataName in proj.MetadataNames.Cast<string>())
-                    {
-                        var metaData = proj.GetMetadata(metaDataName);
-                        Log.LogMessage("{0} = {1}", metaDataName, metaData);
-                    }
-                }
-            }
-            else
-            {
-                Log.LogWarning("Projects is null");
-            }
-            if (ProjectMetaData != null)
-            {
-                Log.LogMessage("projectmetadata num = {0}", ProjectMetaData.Length);
-                foreach (var proj in ProjectMetaData)
-                {
-                    // var guid = Guid.NewGuid();
-                    // var projectSlnFileName = Path.GetFileNameWithoutExtension(proj.ItemSpec) + ".sln";
-                    // var slnProj = new SlnProject(Path.GetFullPath(proj.ItemSpec), Path.GetFileNameWithoutExtension(projectSlnFileName), guid, SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, null), null, null, false);
-                    Log.LogMessage("meta: itemspec = {0}, metadatanames = {1}", proj.ItemSpec, string.Join("|", proj.MetadataNames.Cast<string>()));
-                    foreach (var metaDataName in proj.MetadataNames.Cast<string>())
-                    {
-                        var metaData = proj.GetMetadata(metaDataName);
-                        Log.LogMessage("meta: {0} = {1}", metaDataName, metaData);
-                    }
-                }
             }
             else
             {

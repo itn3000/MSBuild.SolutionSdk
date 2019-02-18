@@ -214,41 +214,42 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
                 {
                     mappedPlatformMap = projectPlatformMapString.Split(';').Select(x => x.Split(new[] { '=' }, 2)).Where(x => x.Length == 2).ToDictionary(x => x[0], x => x[1]);
                 }
-                foreach (var (configuration, mappedName) in globalConfigurations.Select(x =>
+                foreach (var (configuration, globalConfigurationName) in globalConfigurations.Select(x =>
                 {
-                    var mapped = mappedConfigurationMap.FirstOrDefault(y => y.Value == x);
-                    if(mapped.Value != null)
+                    if (mappedConfigurationMap.ContainsKey(x))
                     {
-                        return (configuration: mapped.Key, mappedName: mapped.Value);
+                        return (configuration: mappedConfigurationMap[x], globalName: x);
+                    }
+                    else if (project.Configurations.Contains(x))
+                    {
+                        return (configuration: x, globalName: x);
                     }
                     else
                     {
-                        if(project.Configurations.Contains(x))
-                        {
-                            return (configuration: x, mappedName: x);
-                        }
-                        else
-                        {
-                            return (configuration: null, mappedName: null);
-                        }
+                        return (configuration: null, globalName: null);
                     }
                 }).Where(x => x.configuration != null))
                 {
-                    foreach (string platform in project.Platforms)
+                    foreach (var (platform, globalPlatformName) in globalPlatforms.Select(x =>
+                    {
+                        if (mappedPlatformMap.ContainsKey(x))
+                        {
+                            return (configuration: mappedPlatformMap[x], globalName: x);
+                        }
+                        else if (project.Platforms.Contains(x))
+                        {
+                            return (configuration: x, globalName: x);
+                        }
+                        else
+                        {
+                            return (configuration: null, globalName: null);
+                        }
+                    }).Where(x => x.configuration != null))
                     {
                         if (!string.IsNullOrWhiteSpace(configuration) && !string.IsNullOrWhiteSpace(platform))
                         {
-                            string mappedConfiguration = mappedName;
-                            string mappedPlatform;
-                            if (!mappedPlatformMap.TryGetValue(platform, out mappedPlatform))
-                            {
-                                mappedPlatform = platform;
-                            }
-                            if (globalConfigurations.Any(x => x == mappedConfiguration) && globalPlatforms.Any(x => x == mappedPlatform))
-                            {
-                                writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{mappedConfiguration}|{mappedPlatform}.ActiveCfg = {configuration}|{platform}");
-                                writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{mappedConfiguration}|{mappedPlatform}.Build.0 = {configuration}|{platform}");
-                            }
+                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{globalConfigurationName}|{globalPlatformName}.ActiveCfg = {configuration}|{platform}");
+                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{globalConfigurationName}|{globalPlatformName}.Build.0 = {configuration}|{platform}");
                         }
                     }
                 }
