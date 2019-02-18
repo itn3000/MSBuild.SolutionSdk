@@ -25,12 +25,12 @@ namespace MSBuild.SolutionSdk.Tasks
         public ITaskItem[] AdditionalProperties { get; set; }
         static Dictionary<string, string> ExtractMap(string str, char delimiterElement, char delimiterKeyValue)
         {
-            if(string.IsNullOrEmpty(str))
+            if (string.IsNullOrEmpty(str))
             {
                 return new Dictionary<string, string>();
             }
             return str.Split(delimiterElement)
-                .Select(x => x.Split(new char[1]{ delimiterKeyValue }, 2))
+                .Select(x => x.Split(new char[1] { delimiterKeyValue }, 2))
                 .Where(x => x.Length == 2)
                 .ToDictionary(x => x[0], x => x[1])
                 ;
@@ -55,40 +55,50 @@ namespace MSBuild.SolutionSdk.Tasks
             }
             if (Projects != null)
             {
-                var slnFile = new SlnFile();
-                var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
                 Log.LogMessage("project num = {0}", Projects.Length);
                 var configurations = new string[] { "Debug", "Release" };
-                var platforms = new string[] { "Any CPU", "x86", "x64" };
-                if(Platforms != null && Platforms.Length != 0)
+                var platforms = new string[] { "Any CPU" };
+                if (Platforms != null && Platforms.Length != 0)
                 {
                     platforms = Platforms.Select(x => x.ItemSpec).ToArray();
                 }
-                if(Configurations != null && Configurations.Length != 0)
+                if (Configurations != null && Configurations.Length != 0)
                 {
                     configurations = Configurations.Select(x => x.ItemSpec).ToArray();
                 }
-                var projectConfigurationMap = new Dictionary<Guid, Dictionary<string, string>>();
-                var projectPlatformMap = new Dictionary<Guid, Dictionary<string, string>>();
+                var slnFile = new SlnFile("12.0", configurations, platforms);
+                var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
+                var configurationMap = new Dictionary<string, string>();
+                var platformMap = new Dictionary<string, string>();
                 var projects = Projects.Select(proj =>
                 {
                     var guid = Guid.NewGuid();
                     var typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
                     Log.LogMessage("typeguid={0}", typeguid);
-                    var configurationMap = ExtractMap(proj.GetMetadata("ConfigurationMap"), ';', '=');
-                    if(configurationMap != null && configurationMap.Count != 0)
+                    string[] projectConfigurations;
+                    var projectConfigurationString = proj.GetMetadata("Configurations");
+                    if (!string.IsNullOrEmpty(projectConfigurationString))
                     {
-                        projectConfigurationMap[guid] = configurationMap;
+                        projectConfigurations = projectConfigurationString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
                     }
-                    var platformMap = ExtractMap(proj.GetMetadata("PlatformMap"), ';', '=');
-                    if(platformMap != null && platformMap.Count != 0)
+                    else
                     {
-                        projectPlatformMap[guid] = platformMap;
+                        projectConfigurations = configurations;
                     }
-                    var projectConfigurations = configurations.Select(x => configurationMap.ContainsKey(x) ? configurationMap[x] : x)
-                        .OrderBy(x => x).Distinct().ToArray();
-                    var projectPlatforms = platforms.Select(x => platformMap.ContainsKey(x) ? platformMap[x] : x)
-                        .OrderBy(x => x).Distinct().ToArray();
+                    configurationMap[proj.ItemSpec] = proj.GetMetadata("ConfigurationMap");
+                    string[] projectPlatforms;
+                    var projectPlatformString = proj.GetMetadata("Platforms");
+                    if (!string.IsNullOrEmpty(projectPlatformString))
+                    {
+                        projectPlatforms = projectPlatformString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                    }
+                    else
+                    {
+                        projectPlatforms = platforms;
+                    }
+                    platformMap[proj.ItemSpec] = proj.GetMetadata("PlatformMap");
+                    Log.LogMessage("configurations = {0}", string.Join("|", projectConfigurations));
+                    Log.LogMessage("platforms = {0}", string.Join("|", projectPlatforms));
                     return new SlnProject(
                         proj.ItemSpec,
                         Path.GetFileNameWithoutExtension(proj.ItemSpec),
@@ -97,11 +107,19 @@ namespace MSBuild.SolutionSdk.Tasks
                         projectConfigurations,
                         projectPlatforms,
                         false);
-                });
-                slnFile.UpdateConfigurationMap(projectConfigurationMap);
-                slnFile.UpdatePlatformMap(projectPlatformMap);
+                }).ToArray();
+                Log.LogMessage("configurationMap num = {0}", configurationMap.Count);
+                foreach(var kv in configurationMap)
+                {
+                    Log.LogMessage("configurationMap: {0} = {1}", kv.Key, kv.Value);
+                }
+                Log.LogMessage("platformMap num = {0}", platformMap.Count);
+                foreach(var kv in platformMap)
+                {
+                    Log.LogMessage("platformMap: {0} = {1}", kv.Key, kv.Value);
+                }
                 slnFile.AddProjects(projects);
-                slnFile.Save(Path.Combine(ProjectDirectory.ItemSpec, slnFileName), false);
+                slnFile.Save(Path.Combine(ProjectDirectory.ItemSpec, slnFileName), false, configurationMap, platformMap);
                 foreach (var proj in Projects)
                 {
                     Log.LogMessage("itemspec = {0}, metadatanames = {1}", proj.ItemSpec, string.Join("|", proj.MetadataNames.Cast<string>()));

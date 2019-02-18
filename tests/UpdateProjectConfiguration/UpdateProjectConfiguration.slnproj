@@ -1,0 +1,22 @@
+<Project>
+  <Import Project="..\..\src\MSBuild.SolutionSdk\Sdk\Sdk.props" />
+
+  <PropertyGroup>
+    <SolutionSdkTasksAssembly>$(MSBuildThisFileDirectory)..\..\src\bin\Debug\MSBuild.SolutionSdk.dll</SolutionSdkTasksAssembly>
+    <SolutionConfigurations>Debug;Release</SolutionConfigurations>
+    <!-- <SolutionPlatforms>Any CPU;x86;x64</SolutionPlatforms> -->
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnableDefaultProjectItems>true</EnableDefaultProjectItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Project Update="lib1/lib1.csproj">
+      <ConfigurationMap>Hoge=Debug</ConfigurationMap>
+      <Configurations>Debug;Release;Hoge</Configurations>
+    </Project>
+  </ItemGroup>
+
+  <Import Project="..\..\src\MSBuild.SolutionSdk\Sdk\Sdk.targets" />
+</Project>

@@ -34,14 +34,19 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         private Dictionary<Guid, Dictionary<string, string>> _configurationMap = new Dictionary<Guid, Dictionary<string, string>>();
         private Dictionary<Guid, Dictionary<string, string>> _platformMap = new Dictionary<Guid, Dictionary<string, string>>();
 
+        private string[] _solutionConfigurations;
+        private string[] _solutionPlatforms;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SlnFile" /> class.
         /// </summary>
         /// <param name="projects">The project collection.</param>
         /// <param name="fileFormatVersion">The file format version.</param>
-        public SlnFile(string fileFormatVersion)
+        public SlnFile(string fileFormatVersion, string[] configurations, string[] platforms)
         {
             _fileFormatVersion = fileFormatVersion;
+            _solutionConfigurations = configurations;
+            _solutionPlatforms = platforms;
         }
 
         /// <summary>
@@ -49,7 +54,7 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// </summary>
         /// <param name="projects">The projects.</param>
         public SlnFile()
-            : this("12.00")
+            : this("12.00", null, null)
         {
         }
 
@@ -69,14 +74,14 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 
         public void UpdateConfigurationMap(IEnumerable<KeyValuePair<Guid, Dictionary<string, string>>> configurationMap)
         {
-            foreach(var map in configurationMap)
+            foreach (var map in configurationMap)
             {
                 _configurationMap[map.Key] = map.Value;
             }
         }
         public void UpdatePlatformMap(IEnumerable<KeyValuePair<Guid, Dictionary<string, string>>> maps)
         {
-            foreach(var map in maps)
+            foreach (var map in maps)
             {
                 _platformMap[map.Key] = map.Value;
             }
@@ -91,12 +96,16 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             _solutionItems.AddRange(items);
         }
 
+        public void Save(string path, bool folders)
+        {
+            Save(path, folders, null, null);
+        }
         /// <summary>
         /// Saves the Visual Studio solution to a file.
         /// </summary>
         /// <param name="path">The full path to the file to write to.</param>
         /// <param name="folders">Specifies if folders should be created.</param>
-        public void Save(string path, bool folders)
+        public void Save(string path, bool folders, IReadOnlyDictionary<string, string> configurationMap, IReadOnlyDictionary<string, string> platformMap)
         {
             string directoryName = Path.GetDirectoryName(path);
 
@@ -107,12 +116,19 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 
             using (StreamWriter writer = File.CreateText(path))
             {
-                Save(writer, folders);
+                Save(writer, folders, configurationMap, platformMap);
             }
         }
 
         public void Save(TextWriter writer, bool folders)
         {
+            Save(writer, folders, null, null);
+        }
+
+        public void Save(TextWriter writer, bool folders, IReadOnlyDictionary<string, string> configurationMap, IReadOnlyDictionary<string, string> platformMap)
+        {
+            configurationMap = configurationMap == null ? new Dictionary<string, string>() : configurationMap;
+            platformMap = platformMap == null ? new Dictionary<string, string>() : platformMap;
             writer.WriteLine(Header, _fileFormatVersion);
 
             foreach (SlnProject project in _projects)
@@ -152,47 +168,93 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 
             writer.WriteLine("Global");
 
-            writer.WriteLine("	GlobalSection(SolutionConfigurationPlatforms) = preSolution");
+            writer.WriteLine("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution");
 
-            IEnumerable<string> globalConfigurations = new HashSet<string>(_projects.SelectMany(p => p.Configurations)).Distinct();
-            IEnumerable<string> globalPlatforms = new HashSet<string>(_projects.SelectMany(p => p.Platforms)).Distinct().ToList();
-
+            IEnumerable<string> globalConfigurations = Enumerable.Empty<string>();
+            if (_solutionConfigurations != null && _solutionConfigurations.Length != 0)
+            {
+                globalConfigurations = _solutionConfigurations;
+            }
+            else
+            {
+                globalConfigurations = _projects.SelectMany(p => p.Configurations).Distinct().ToArray();
+            }
+            IEnumerable<string> globalPlatforms = Enumerable.Empty<string>();
+            if (_solutionPlatforms != null && _solutionPlatforms.Length != 0)
+            {
+                globalPlatforms = _solutionPlatforms;
+            }
+            else
+            {
+                globalPlatforms = _projects.SelectMany(p => p.Platforms).Distinct().ToArray();
+            }
             foreach (string configuration in globalConfigurations)
             {
                 foreach (string platform in globalPlatforms)
                 {
                     if (!string.IsNullOrWhiteSpace(configuration) && !string.IsNullOrWhiteSpace(platform))
                     {
-                        writer.WriteLine($"		{configuration}|{platform} = {configuration}|{platform}");
+                        writer.WriteLine($"\t\t{configuration}|{platform} = {configuration}|{platform}");
                     }
                 }
             }
 
-            writer.WriteLine(" EndGlobalSection");
+            writer.WriteLine("\tEndGlobalSection");
 
             writer.WriteLine("	GlobalSection(ProjectConfigurationPlatforms) = preSolution");
             foreach (SlnProject project in _projects)
             {
-                foreach (string configuration in project.Configurations)
+                var mappedConfigurationMap = new Dictionary<string, string>();
+                if (configurationMap.TryGetValue(project.FullPath, out var configurationMapString))
+                {
+                    mappedConfigurationMap = configurationMapString.Split(';').Select(x => x.Split(new[] { '=' }, 2)).Where(x => x.Length == 2).ToDictionary(x => x[0], x => x[1]);
+                }
+                var mappedPlatformMap = new Dictionary<string, string>();
+                if (platformMap.TryGetValue(project.FullPath, out var projectPlatformMapString))
+                {
+                    mappedPlatformMap = projectPlatformMapString.Split(';').Select(x => x.Split(new[] { '=' }, 2)).Where(x => x.Length == 2).ToDictionary(x => x[0], x => x[1]);
+                }
+                foreach (var (configuration, mappedName) in globalConfigurations.Select(x =>
+                {
+                    var mapped = mappedConfigurationMap.FirstOrDefault(y => y.Value == x);
+                    if(mapped.Value != null)
+                    {
+                        return (configuration: mapped.Key, mappedName: mapped.Value);
+                    }
+                    else
+                    {
+                        if(project.Configurations.Contains(x))
+                        {
+                            return (configuration: x, mappedName: x);
+                        }
+                        else
+                        {
+                            return (configuration: null, mappedName: null);
+                        }
+                    }
+                }).Where(x => x.configuration != null))
                 {
                     foreach (string platform in project.Platforms)
                     {
                         if (!string.IsNullOrWhiteSpace(configuration) && !string.IsNullOrWhiteSpace(platform))
                         {
-                            // string projectConfiguration;
-                            // if(_configurationMap.ContainsKey(project.ProjectGuid) && _configurationMap[project.ProjectGuid].ContainsValue(configuration))
-                            // {
-                            //     projectConfiguration = _configurationMap[project.ProjectGuid].First(x => x.)
-                            // }
-                            // string projectPlatform;
-                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{configuration}|{platform}.ActiveCfg = {configuration}|{platform}");
-                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{configuration}|{platform}.Build.0 = {configuration}|{platform}");
+                            string mappedConfiguration = mappedName;
+                            string mappedPlatform;
+                            if (!mappedPlatformMap.TryGetValue(platform, out mappedPlatform))
+                            {
+                                mappedPlatform = platform;
+                            }
+                            if (globalConfigurations.Any(x => x == mappedConfiguration) && globalPlatforms.Any(x => x == mappedPlatform))
+                            {
+                                writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{mappedConfiguration}|{mappedPlatform}.ActiveCfg = {configuration}|{platform}");
+                                writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{mappedConfiguration}|{mappedPlatform}.Build.0 = {configuration}|{platform}");
+                            }
                         }
                     }
                 }
             }
 
-            writer.WriteLine(" EndGlobalSection");
+            writer.WriteLine("\tEndGlobalSection");
 
             if (folders
                 && _projects.Count > 1)

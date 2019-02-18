@@ -71,8 +71,8 @@
       ProjectName="$(MSBuildProjectName)"
       ProjectDirectory="$(MSBuildProjectDirectory)"
       ProjectMetaData="_ProjectMetaData"
-      Configurations="$(Configurations)"
-      Platforms="$(Platforms)"
+      Configurations="$(SolutionConfigurations)"
+      Platforms="$(SolutionPlatforms)"
       AdditionalProperties="$(AdditionalProperties)"
       />
       

@@ -79,6 +79,8 @@ namespace MSBuild.SolutionSdk.Tasks
                 item.SetMetadata("UsingMicrosoftNETSdk", _isUsingMicrosoftNETSdk ? "true" : "false");
                 item.SetMetadata("ConfigurationMap", ProjectItem.GetMetadata("ConfigurationMap"));
                 item.SetMetadata("PlatformMap", ProjectItem.GetMetadata("PlatformMap"));
+                item.SetMetadata("Configurations", ProjectItem.GetMetadata("Configurations"));
+                item.SetMetadata("Platforms", ProjectItem.GetMetadata("Platforms"));
                 return item;
             }
         }
