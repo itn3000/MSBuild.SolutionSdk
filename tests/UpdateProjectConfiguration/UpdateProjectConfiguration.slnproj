@@ -20,6 +20,9 @@
       <ProjectTypeGuid>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuid>
       <SolutionFolder>sub1</SolutionFolder>
     </Project>
+    <Project Update="lib1/lib1.csproj" Condition="'$(Configuration)' == 'Debug'">
+      <Configuration>Hoge</Configuration>
+    </Project>
     <SolutionItem Include="**/*.txt" Exclude="**/obj/**/*.txt;**/bin/**/*.txt">
       <SolutionFolder>sub1/sub2</SolutionFolder>
     </SolutionItem>
