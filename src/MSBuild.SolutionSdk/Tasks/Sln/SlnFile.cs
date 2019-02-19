@@ -29,13 +29,14 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// <summary>
         /// A list of absolute paths to include as Solution Items.
         /// </summary>
-        private readonly List<string> _solutionItems = new List<string>();
+        private readonly List<SlnItem> _solutionItems = new List<SlnItem>();
 
         private Dictionary<Guid, Dictionary<string, string>> _configurationMap = new Dictionary<Guid, Dictionary<string, string>>();
         private Dictionary<Guid, Dictionary<string, string>> _platformMap = new Dictionary<Guid, Dictionary<string, string>>();
 
         private string[] _solutionConfigurations;
         private string[] _solutionPlatforms;
+        private Dictionary<string, SlnFolder> _solutionFolders = new Dictionary<string, SlnFolder>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SlnFile" /> class.
@@ -61,7 +62,7 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// <summary>
         /// Gets a list of solution items.
         /// </summary>
-        public IReadOnlyCollection<string> SolutionItems => _solutionItems;
+        public IReadOnlyCollection<SlnItem> SolutionItems => _solutionItems;
 
         /// <summary>
         /// Adds the specified projects.
@@ -91,11 +92,29 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// Adds the specified solution items.
         /// </summary>
         /// <param name="items">An <see cref="IEnumerable{String}"/> containing items to add to the solution.</param>
-        public void AddSolutionItems(IEnumerable<string> items)
+        // public void AddSolutionItems(IEnumerable<string> items)
+        // {
+        //     _solutionItems.AddRange(items.Select(x => new SlnItem(x, null)));
+        // }
+        /// <summary>
+        /// Adds the specified solution items.
+        /// </summary>
+        /// <param name="items">An <see cref="IEnumerable{String}"/> containing items to add to the solution.</param>
+        public void AddSolutionItems(IEnumerable<SlnItem> items)
         {
             _solutionItems.AddRange(items);
+            UpdateSolutionFolder(items.Select(x => x.Folder));
         }
-
+        public void UpdateSolutionFolder(IEnumerable<SlnFolder> folders)
+        {
+            foreach(var folder in folders)
+            {
+                if(!_solutionFolders.ContainsKey(folder.FullPath))
+                {
+                    _solutionFolders[folder.FullPath] = folder;
+                }
+            }
+        }
         public void Save(string path, bool folders)
         {
             Save(path, folders, null, null);
@@ -131,23 +150,55 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             platformMap = platformMap == null ? new Dictionary<string, string>() : platformMap;
             writer.WriteLine(Header, _fileFormatVersion);
 
+            var slnFolders = BuildSlnFolderList();
+
+            var projectMap = _projects.ToDictionary(x => x.FullPath);
+
             foreach (SlnProject project in _projects)
             {
                 writer.WriteLine($@"Project(""{project.ProjectTypeGuid.ToSolutionString()}"") = ""{project.Name}"", ""{project.FullPath}"", ""{project.ProjectGuid.ToSolutionString()}""");
+                if(project.DependingProjects != null && project.DependingProjects.Length != 0)
+                {
+                    bool isFound = false;
+                    foreach(var dep in project.DependingProjects.Where(x => projectMap.ContainsKey(x)))
+                    {
+                        if(!isFound)
+                        {
+                            writer.WriteLine("\t\tProjectSection(ProjectDependencies) = postProject");
+                            isFound = true;
+                        }
+                        writer.WriteLine($"\t\t\t{projectMap[dep].ProjectGuid.ToSolutionString()} = {projectMap[dep].ProjectGuid.ToSolutionString()}");
+                    }
+                    if(isFound)
+                    {
+                        writer.WriteLine("\t\tEndProjectSection");
+                    }
+                }
                 writer.WriteLine("EndProject");
             }
 
             if (SolutionItems.Count > 0)
             {
-                writer.WriteLine($@"Project(""{SlnFolder.FolderProjectTypeGuid.ToSolutionString()}"") = ""Solution Items"", ""Solution Items"", ""{Guid.NewGuid().ToSolutionString()}"" ");
-                writer.WriteLine("	ProjectSection(SolutionItems) = preProject");
-                foreach (string solutionItem in SolutionItems)
+                foreach (var slnFolder in slnFolders)
                 {
-                    writer.WriteLine($"		{solutionItem} = {solutionItem}");
+                    writer.WriteLine($@"Project(""{SlnFolder.FolderProjectTypeGuid.ToSolutionString()}"") = ""{slnFolder.Value.Name}"", ""{slnFolder.Value.Name}"", ""{slnFolder.Value.FolderGuid.ToSolutionString()}"" ");
+                    writer.WriteLine("\tProjectSection(SolutionItems) = preProject");
+                    foreach (var solutionItem in SolutionItems.Where(x => x.Folder.FolderGuid == slnFolder.Value.FolderGuid))
+                    {
+                        writer.WriteLine($"\t\t{solutionItem.FullPath} = {solutionItem.FullPath}");
+                    }
+                    writer.WriteLine("\tEndProjectSection");
+                    writer.WriteLine("EndProject");
                 }
+                // writer.WriteLine($@"Project(""{SlnFolder.FolderProjectTypeGuid.ToSolutionString()}"") = ""Solution Items"", ""Solution Items"", ""{Guid.NewGuid().ToSolutionString()}"" ");
+                // writer.WriteLine("\tProjectSection(SolutionItems) = preProject");
+                // foreach (var solutionItem in SolutionItems)
+                // {
+                //     writer.WriteLine($"\t\t{solutionItem.FullPath} = {solutionItem.FullPath}");
+                // }
 
-                writer.WriteLine("	EndProjectSection");
-                writer.WriteLine("EndProject");
+                // writer.WriteLine("\tEndProjectSection");
+                // writer.WriteLine("EndProject");
             }
 
             SlnHierarchy hierarchy = null;
@@ -168,9 +219,64 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 
             writer.WriteLine("Global");
 
-            writer.WriteLine("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution");
+            var (globalConfigurations, globalPlatforms) = GetSolutionConfigurations();
 
-            IEnumerable<string> globalConfigurations = Enumerable.Empty<string>();
+            WriteSolutionConfigurations(writer, globalConfigurations, globalPlatforms);
+
+            WriteProjectConfigurations(writer, globalConfigurations, globalPlatforms, configurationMap, platformMap);
+
+
+            if (folders
+                && _projects.Count > 1)
+            {
+                writer.WriteLine(@"	GlobalSection(NestedProjects) = preSolution");
+                foreach (KeyValuePair<Guid, Guid> nestedProject in hierarchy.Hierarchy)
+                {
+                    writer.WriteLine($@"		{nestedProject.Key.ToSolutionString()} = {nestedProject.Value.ToSolutionString()}");
+                }
+
+                writer.WriteLine("	EndGlobalSection");
+            }
+            {
+                bool isFound = false;
+                foreach (var slnFolder in _solutionFolders)
+                {
+                    if (slnFolders.ContainsKey(Path.GetDirectoryName(slnFolder.Key)))
+                    {
+                        if (!isFound)
+                        {
+                            writer.WriteLine("\tGlobalSection(NestedProjects) = preSolution");
+                            isFound = true;
+                        }
+                        writer.WriteLine($"\t\t{slnFolder.Value.FolderGuid.ToSolutionString()} = {slnFolders[Path.GetDirectoryName(slnFolder.Key)].FolderGuid.ToSolutionString()}");
+                    }
+                    var proj = _projects.FirstOrDefault(x => x.SlnFolder != null && x.SlnFolder == slnFolder.Key);
+                    if(proj != null)
+                    {
+                        if (!isFound)
+                        {
+                            writer.WriteLine("\tGlobalSection(NestedProjects) = preSolution");
+                            isFound = true;
+                        }
+                        writer.WriteLine($"\t\t{proj.ProjectGuid.ToSolutionString()} = {slnFolder.Value.FolderGuid.ToSolutionString()}");
+                    }
+                }
+                if (isFound)
+                {
+                    writer.WriteLine("\tEndGlobalSection");
+                }
+            }
+
+
+            writer.WriteLine("EndGlobal");
+        }
+        Dictionary<string, SlnFolder> BuildSlnFolderList()
+        {
+            return _solutionFolders;
+        }
+        (string[] globalConfigurations, string[] globalPlatforms) GetSolutionConfigurations()
+        {
+            string[] globalConfigurations = new string[0];
             if (_solutionConfigurations != null && _solutionConfigurations.Length != 0)
             {
                 globalConfigurations = _solutionConfigurations;
@@ -179,7 +285,7 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             {
                 globalConfigurations = _projects.SelectMany(p => p.Configurations).Distinct().ToArray();
             }
-            IEnumerable<string> globalPlatforms = Enumerable.Empty<string>();
+            string[] globalPlatforms = new string[0];
             if (_solutionPlatforms != null && _solutionPlatforms.Length != 0)
             {
                 globalPlatforms = _solutionPlatforms;
@@ -188,6 +294,12 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             {
                 globalPlatforms = _projects.SelectMany(p => p.Platforms).Distinct().ToArray();
             }
+            return (globalConfigurations, globalPlatforms);
+        }
+        void WriteSolutionConfigurations(TextWriter writer, string[] globalConfigurations, string[] globalPlatforms)
+        {
+            writer.WriteLine("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution");
+
             foreach (string configuration in globalConfigurations)
             {
                 foreach (string platform in globalPlatforms)
@@ -200,7 +312,10 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             }
 
             writer.WriteLine("\tEndGlobalSection");
-
+        }
+        void WriteProjectConfigurations(TextWriter writer, string[] globalConfigurations, string[] globalPlatforms,
+            IReadOnlyDictionary<string, string> configurationMap, IReadOnlyDictionary<string, string> platformMap)
+        {
             writer.WriteLine("	GlobalSection(ProjectConfigurationPlatforms) = preSolution");
             foreach (SlnProject project in _projects)
             {
@@ -256,20 +371,6 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             }
 
             writer.WriteLine("\tEndGlobalSection");
-
-            if (folders
-                && _projects.Count > 1)
-            {
-                writer.WriteLine(@"	GlobalSection(NestedProjects) = preSolution");
-                foreach (KeyValuePair<Guid, Guid> nestedProject in hierarchy.Hierarchy)
-                {
-                    writer.WriteLine($@"		{nestedProject.Key.ToSolutionString()} = {nestedProject.Value.ToSolutionString()}");
-                }
-
-                writer.WriteLine("	EndGlobalSection");
-            }
-
-            writer.WriteLine("EndGlobal");
         }
     }
 }

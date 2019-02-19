@@ -12,19 +12,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Project Update="lib1/lib1.csproj">
+    <Project Update="lib1/lib1.csproj" DependsOn="lib2/lib2.csproj">
       <ConfigurationMap>Debug=Hoge</ConfigurationMap>
       <Configurations>Debug;Release;Hoge</Configurations>
       <Platforms>Any CPU</Platforms>
+      <ProjectGuid>{34B6A722-885D-4E25-B9EF-29421986994C}</ProjectGuid>
+      <ProjectTypeGuid>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuid>
+      <SolutionFolder>sub1</SolutionFolder>
     </Project>
     <SolutionItem Include="**/*.txt" Exclude="**/obj/**/*.txt;**/bin/**/*.txt">
-      <FolderName>solutionfolder</FolderName>
+      <SolutionFolder>sub1/sub2</SolutionFolder>
     </SolutionItem>
   </ItemGroup>
-
-  <Target Name="OutputSolutionItems">
-    <Message Importance="Normal" Text="solutionitems is @(SolutionItem)"/>
-  </Target>
 
   <Import Project="..\..\src\MSBuild.SolutionSdk\Sdk\Sdk.targets" />
 </Project>

@@ -81,6 +81,10 @@ namespace MSBuild.SolutionSdk.Tasks
                 item.SetMetadata("PlatformMap", ProjectItem.GetMetadata("PlatformMap"));
                 item.SetMetadata("Configurations", ProjectItem.GetMetadata("Configurations"));
                 item.SetMetadata("Platforms", ProjectItem.GetMetadata("Platforms"));
+                item.SetMetadata("SolutionFolder", ProjectItem.GetMetadata("SolutionFolder"));
+                item.SetMetadata("ProjectGuid", ProjectItem.GetMetadata("ProjectGuid"));
+                item.SetMetadata("ProjectTypeGuid", ProjectItem.GetMetadata("ProjectTypeGuid"));
+                item.SetMetadata("DependsOn", ProjectItem.GetMetadata("DependsOn"));
                 return item;
             }
         }

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Build.Evaluation;
 
 namespace MSBuild.SolutionSdk.Tasks.Sln
@@ -52,7 +53,8 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             [".wixproj"] = new Guid("930C7802-8A8C-48F9-8165-68863BCCD9DD")
         };
 
-        public SlnProject(string fullPath, string name, Guid projectGuid, Guid projectTypeGuid, IEnumerable<string> configurations, IEnumerable<string> platforms, bool isMainProject)
+        public SlnProject(string fullPath, 
+            string name, Guid projectGuid, Guid projectTypeGuid, IEnumerable<string> configurations, IEnumerable<string> platforms, bool isMainProject, string slnFolder, string dependsOn)
         {
             FullPath = fullPath ?? throw new ArgumentNullException(nameof(fullPath));
             Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -61,6 +63,8 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
             IsMainProject = isMainProject;
             Configurations = configurations;
             Platforms = platforms;
+            SlnFolder = slnFolder != null ? slnFolder.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar) : null;
+            DependingProjects = dependsOn != null ? dependsOn.Split(';').Select(x => x.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar).Trim()).ToArray() : new string[0];
         }
 
         public IEnumerable<string> Configurations { get; }
@@ -79,6 +83,8 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 
         public Dictionary<string, string> ConfigurationMap { get; }
         public Dictionary<string, string> PlatformMap { get; }
+        public string SlnFolder { get; }
+        public string[] DependingProjects;
 
         
         public static SlnProject FromProject(Project project,  IReadOnlyDictionary<string, Guid> customProjectTypeGuids, bool isMainProject = false)
@@ -111,7 +117,7 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
                 throw new FormatException($"property ProjectGuid has an invalid format in {project.FullPath}");
             }
 
-            return new SlnProject(project.FullPath, name, projectGuid, projectTypeGuid, configurations, platforms, isMainProject);
+            return new SlnProject(project.FullPath, name, projectGuid, projectTypeGuid, configurations, platforms, isMainProject, null, null);
         }
 
         /// <summary>
