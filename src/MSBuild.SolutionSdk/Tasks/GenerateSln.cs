@@ -10,8 +10,8 @@ namespace MSBuild.SolutionSdk.Tasks
 {
     public class GenerateSln : Task
     {
-        [Required]
-        public ITaskItem[] Projects { get; set; }
+        // [Required]
+        // public ITaskItem[] Projects { get; set; }
         [Required]
         public ITaskItem ProjectName { get; set; }
         [Required]
@@ -24,6 +24,8 @@ namespace MSBuild.SolutionSdk.Tasks
         public ITaskItem[] Platforms { get; set; }
         public ITaskItem[] AdditionalProperties { get; set; }
         public ITaskItem[] SolutionItems { get; set; }
+        public ITaskItem VisualStudioVersion { get; set; }
+        public ITaskItem MinVisualStudioVersion { get; set; }
         static Dictionary<string, string> ExtractMap(string str, char delimiterElement, char delimiterKeyValue)
         {
             if (string.IsNullOrEmpty(str))
@@ -38,7 +40,7 @@ namespace MSBuild.SolutionSdk.Tasks
         }
         (SlnProject[] projects, Dictionary<string, string> configurationMap, Dictionary<string, string> platformMap) GetProjects(string[] defaultConfigurations, string[] defaultPlatforms)
         {
-            var ret = Projects.OrderBy(x => int.TryParse(x.GetMetadata("BuildOrder"), out var order) ? order : 0)
+            var ret = ProjectMetaData.OrderBy(x => int.TryParse(x.GetMetadata("BuildOrder"), out var order) ? order : 0)
                 .Select(proj =>
                 {
                     var guidString = proj.GetMetadata("ProjectGuid");
@@ -78,7 +80,7 @@ namespace MSBuild.SolutionSdk.Tasks
                     Log.LogMessage("project configurations = {0}", string.Join("|", projectConfigurations));
                     Log.LogMessage("project platforms = {0}", string.Join("|", projectPlatforms));
                     return (project: new SlnProject(
-                        proj.ItemSpec,
+                        proj.GetMetadata("OriginalItemSpec"),
                         Path.GetFileNameWithoutExtension(proj.ItemSpec),
                         guid,
                         typeguid,
@@ -112,10 +114,10 @@ namespace MSBuild.SolutionSdk.Tasks
         }
         public override bool Execute()
         {
-            if (Projects != null)
+            if (ProjectMetaData != null)
             {
-                var configurations = new string[] { "Debug", "Release" };
-                var platforms = new string[] { "Any CPU" };
+                var configurations = ProjectMetaData.SelectMany(x => x.GetMetadata("Configurations").Split(';')).Distinct().ToArray();
+                var platforms = ProjectMetaData.SelectMany(x => x.GetMetadata("Platforms").Split(';')).Distinct().ToArray();
                 if (Platforms != null && Platforms.Length != 0)
                 {
                     platforms = Platforms.Select(x => x.ItemSpec).ToArray();
@@ -127,7 +129,7 @@ namespace MSBuild.SolutionSdk.Tasks
                 Log.LogMessage("configurations='{0}', platforms='{1}'",
                     string.Join(";", configurations),
                     string.Join(";", platforms));
-                var slnFile = new SlnFile("12.0", configurations, platforms);
+                var slnFile = new SlnFile("12.0", VisualStudioVersion?.ItemSpec, MinVisualStudioVersion?.ItemSpec, configurations, platforms);
                 var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
                 var (projects, configurationMap, platformMap) = GetProjects(configurations, platforms);
                 slnFile.AddProjects(projects);

@@ -7,8 +7,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
     <Version>0.1.0</Version>
-    <Authors>Jeff Cyr</Authors>
-    <Copyright>© Jeff Cyr</Copyright>
+    <Authors>Jeff Cyr;Itn3000</Authors>
+    <Copyright>© Jeff Cyr;Itn3000</Copyright>
     <PackageLicenseUrl>https://github.com/JeffCyr/MSBuild.SolutionSdk/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/JeffCyr/MSBuild.SolutionSdk</PackageProjectUrl>
     <RepositoryUrl>https://github.com/JeffCyr/MSBuild.SolutionSdk</RepositoryUrl>

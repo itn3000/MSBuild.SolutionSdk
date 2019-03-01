@@ -3,8 +3,8 @@
 
   <PropertyGroup>
     <SolutionSdkTasksAssembly>$(MSBuildThisFileDirectory)..\..\src\bin\Debug\MSBuild.SolutionSdk.dll</SolutionSdkTasksAssembly>
-    <SolutionConfigurations>Debug;Release</SolutionConfigurations>
-    <SolutionPlatforms>Any CPU;x86;x64</SolutionPlatforms>
+    <!-- <SolutionConfigurations>Debug;Release</SolutionConfigurations> -->
+    <!-- <SolutionPlatforms>AnyCPU;x86;x64</SolutionPlatforms> -->
   </PropertyGroup>
 
   <PropertyGroup>
@@ -14,14 +14,15 @@
   <ItemGroup>
     <Project Update="lib1/lib1.csproj" DependsOn="lib2/lib2.csproj">
       <ConfigurationMap>Debug=Hoge</ConfigurationMap>
-      <Configurations>Debug;Release;Hoge</Configurations>
-      <Platforms>Any CPU</Platforms>
       <ProjectGuid>{34B6A722-885D-4E25-B9EF-29421986994C}</ProjectGuid>
       <ProjectTypeGuid>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuid>
       <SolutionFolder>sub1</SolutionFolder>
     </Project>
-    <Project Update="lib1/lib1.csproj" Condition="'$(Configuration)' == 'Debug'">
-      <Configuration>Hoge</Configuration>
+    <Project Update="lib2/lib2.csproj">
+      <ProjectGuid>{FE0169FD-2B4F-4349-B7F4-77114E693EC0}</ProjectGuid>
+    </Project>
+    <Project Update="**/*.csproj">
+      <PlatformMap>AnyCPU=Any CPU</PlatformMap>
     </Project>
     <SolutionItem Include="**/*.txt" Exclude="**/obj/**/*.txt;**/bin/**/*.txt">
       <SolutionFolder>sub1/sub2</SolutionFolder>

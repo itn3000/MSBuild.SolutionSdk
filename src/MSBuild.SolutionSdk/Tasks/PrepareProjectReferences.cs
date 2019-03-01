@@ -69,11 +69,27 @@ namespace MSBuild.SolutionSdk.Tasks
                     !supportedConfigurations.Contains(ActiveConfiguration, StringComparer.OrdinalIgnoreCase) ||
                     !supportedPlatforms.Contains(ActivePlatform, StringComparer.OrdinalIgnoreCase);
             }
-
+            string LookupValueFromKeyValueString(string keyValueString, string value)
+            {
+                if(!string.IsNullOrEmpty(keyValueString) || string.IsNullOrEmpty(value))
+                {
+                    return null;
+                }
+                value = value.Trim();
+                return keyValueString.Split(';')
+                    .Select(x => x.Split(new char[]{ '=' }, 2))
+                    .Where(x => x.Length == 2 && x[0].Trim().Equals(value, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x[1].Trim())
+                    .FirstOrDefault();
+            }
             public ITaskItem CreateProjectReferenceItem(int buildOrder)
             {
+                var configurationMap = ProjectItem.GetMetadata("ConfigurationMap");
+                var activeConfiguration = LookupValueFromKeyValueString(configurationMap, ActiveConfiguration) ?? ActiveConfiguration;
+                var platformMap = ProjectItem.GetMetadata("PlatformMap");
+                var activePlatform = LookupValueFromKeyValueString(platformMap, ActivePlatform) ?? ActivePlatform;
                 var item = new TaskItem(ProjectItem.ItemSpec);
-                item.SetMetadata("Properties", $"Configuration={ActiveConfiguration};Platform={ActivePlatform}");
+                item.SetMetadata("Properties", $"Configuration={activeConfiguration};Platform={activePlatform}");
                 item.SetMetadata("AdditionalProperties", ProjectItem.GetMetadata("AdditionalProperties"));
                 item.SetMetadata("BuildOrder", buildOrder.ToString());
                 item.SetMetadata("UsingMicrosoftNETSdk", _isUsingMicrosoftNETSdk ? "true" : "false");

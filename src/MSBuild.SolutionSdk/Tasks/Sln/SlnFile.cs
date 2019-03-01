@@ -11,6 +11,8 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
 {
     internal sealed class SlnFile
     {
+        const string DefaultVsVersion = "16.0.28606.126";
+        const string DefaultMinVsVersion = "10.0.40219.1";
         /// <summary>
         /// The solution header
         /// </summary>
@@ -20,6 +22,16 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// The file format version
         /// </summary>
         private readonly string _fileFormatVersion;
+
+        /// <summary>
+        /// Visual Studio Version
+        /// </summary>
+        private readonly string _vsVersion;
+
+        /// <summary>
+        /// minimum Visual Studio Version
+        /// </summary>
+        private readonly string _minVsVersion;
 
         /// <summary>
         /// Gets the projects.
@@ -43,9 +55,11 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// </summary>
         /// <param name="projects">The project collection.</param>
         /// <param name="fileFormatVersion">The file format version.</param>
-        public SlnFile(string fileFormatVersion, string[] configurations, string[] platforms)
+        public SlnFile(string fileFormatVersion, string vsVersion, string minimumVsVersion, string[] configurations, string[] platforms)
         {
             _fileFormatVersion = fileFormatVersion;
+            _minVsVersion = string.IsNullOrEmpty(minimumVsVersion) ? DefaultMinVsVersion : minimumVsVersion;
+            _vsVersion = string.IsNullOrEmpty(vsVersion) ? DefaultVsVersion : vsVersion;
             _solutionConfigurations = configurations;
             _solutionPlatforms = platforms;
         }
@@ -55,7 +69,7 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         /// </summary>
         /// <param name="projects">The projects.</param>
         public SlnFile()
-            : this("12.00", null, null)
+            : this("12.00", DefaultVsVersion, DefaultMinVsVersion, null, null)
         {
         }
 
@@ -148,7 +162,11 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         {
             configurationMap = configurationMap == null ? new Dictionary<string, string>() : configurationMap;
             platformMap = platformMap == null ? new Dictionary<string, string>() : platformMap;
+            var vsver = Version.Parse(_vsVersion);
             writer.WriteLine(Header, _fileFormatVersion);
+            writer.WriteLine($"# Visual Studio Version {vsver.Major}");
+            writer.WriteLine($"VisualStudioVersion = {_vsVersion}");
+            writer.WriteLine($"MinimumVisualStudioVersion = {_minVsVersion}");
 
             var slnFolders = BuildSlnFolderList();
 
@@ -190,15 +208,6 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
                     writer.WriteLine("\tEndProjectSection");
                     writer.WriteLine("EndProject");
                 }
-                // writer.WriteLine($@"Project(""{SlnFolder.FolderProjectTypeGuid.ToSolutionString()}"") = ""Solution Items"", ""Solution Items"", ""{Guid.NewGuid().ToSolutionString()}"" ");
-                // writer.WriteLine("\tProjectSection(SolutionItems) = preProject");
-                // foreach (var solutionItem in SolutionItems)
-                // {
-                //     writer.WriteLine($"\t\t{solutionItem.FullPath} = {solutionItem.FullPath}");
-                // }
-
-                // writer.WriteLine("\tEndProjectSection");
-                // writer.WriteLine("EndProject");
             }
 
             SlnHierarchy hierarchy = null;
@@ -316,7 +325,7 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
         void WriteProjectConfigurations(TextWriter writer, string[] globalConfigurations, string[] globalPlatforms,
             IReadOnlyDictionary<string, string> configurationMap, IReadOnlyDictionary<string, string> platformMap)
         {
-            writer.WriteLine("	GlobalSection(ProjectConfigurationPlatforms) = preSolution");
+            writer.WriteLine("	GlobalSection(ProjectConfigurationPlatforms) = postSolution");
             foreach (SlnProject project in _projects)
             {
                 var mappedConfigurationMap = new Dictionary<string, string>();

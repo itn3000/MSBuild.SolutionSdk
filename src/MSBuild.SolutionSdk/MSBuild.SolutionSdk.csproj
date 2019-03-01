@@ -9,6 +9,7 @@
     <PackageTags>msbuild;sdk;slnproj</PackageTags>
     <PackageType>MSBuildSdk</PackageType>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <PackageId>Itn.MSBuild.SolutionSdk</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
