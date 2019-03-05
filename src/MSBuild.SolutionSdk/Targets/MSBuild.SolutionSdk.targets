@@ -57,6 +57,14 @@
     </PrepareProjectReferences>
   </Target>
 
+  <Target Name="GetSolutionItems" Returns="@(_SolutionItems)">
+    <ItemGroup>
+      <_SolutionItems Include="@(SolutionItem)">
+
+      </_SolutionItems>
+    </ItemGroup>
+  </Target>
+
   <Target Name="GetProjectMetadata" Returns="@(_ProjectMetadata)">
     <ItemGroup>
       <_ProjectMetadata Include="$(MSBuildProjectFullPath)">

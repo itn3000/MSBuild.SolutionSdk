@@ -38,6 +38,43 @@ namespace MSBuild.SolutionSdk.Tasks
                 .ToDictionary(x => x[0], x => x[1])
                 ;
         }
+        string[] SplitOrDefault(string str, char[] delim, string[] defaultValues = null)
+        {
+            defaultValues = defaultValues ?? Array.Empty<string>();
+            if(!string.IsNullOrEmpty(str))
+            {
+                return str.Split(delim, StringSplitOptions.RemoveEmptyEntries);
+            }
+            else
+            {
+                return defaultValues;
+            }
+        }
+        (string[] configurations, string[] platforms) ExtractProjectConfiguration(string projectConfigurationString)
+        {
+            var cfgs = SplitOrDefault(projectConfigurationString, new char[]{';'});
+            return (cfgs.Select(x => x.Split('|').First()).Distinct().ToArray(), cfgs.Select(x => x.Split('|').Last()).Distinct().ToArray());
+        }
+        string[] ExtractConfigurationsFromProject(ITaskItem project)
+        {
+            var ret = SplitOrDefault(project.GetMetadata("Configurations"), new char[] { ';' });
+            if(ret.Length == 0)
+            {
+                var (cfg, _) = ExtractProjectConfiguration(project.GetMetadata("ProjectConfiguration"));
+                ret = cfg;
+            }
+            return ret.Distinct().ToArray();
+        }
+        string[] ExtractPlatformsFromProject(ITaskItem project)
+        {
+            var ret = SplitOrDefault(project.GetMetadata("Platforms"), new char[] { ';' });
+            if(ret.Length == 0)
+            {
+                var (_, p) = ExtractProjectConfiguration(project.GetMetadata("ProjectConfiguration"));
+                ret = p;
+            }
+            return ret.Distinct().ToArray();
+        }
         (SlnProject project, string configurationMap, string platformMap) GetProject(ITaskItem[] projects, string[] defaultConfigurations, string[] defaultPlatforms)
         {
             Log.LogMessage("arraynum: {0}", projects.Length);
@@ -59,24 +96,17 @@ namespace MSBuild.SolutionSdk.Tasks
                 typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
             }
             Log.LogMessage("typeguid={0}", typeguid);
-            string[] projectConfigurations;
-            var projectConfigurationString = proj.GetMetadata("Configurations");
-
-            if (!string.IsNullOrEmpty(projectConfigurationString))
+            string[] projectConfigurations = SplitOrDefault(proj.GetMetadata("Configurations"), new char[]{ ';' });
+            string[] projectPlatforms = SplitOrDefault(proj.GetMetadata("Platforms"), new char[]{ ';' });
+            if(!projectPlatforms.Any() && !projectConfigurations.Any())
             {
-                projectConfigurations = projectConfigurationString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                (projectConfigurations, projectPlatforms) = ExtractProjectConfiguration(proj.GetMetadata("ProjectConfiguration"));
             }
-            else
+            if(!projectConfigurations.Any())
             {
                 projectConfigurations = defaultConfigurations;
             }
-            string[] projectPlatforms;
-            var projectPlatformString = proj.GetMetadata("Platforms");
-            if (!string.IsNullOrEmpty(projectPlatformString))
-            {
-                projectPlatforms = projectPlatformString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
-            }
-            else
+            if(!projectPlatforms.Any())
             {
                 projectPlatforms = defaultPlatforms;
             }
@@ -92,7 +122,7 @@ namespace MSBuild.SolutionSdk.Tasks
                 false,
                 proj.GetMetadata("SolutionFolder"), proj.GetMetadata("DependsOn")),
                     configurationMap: string.Join(";", projects.Select(x => $"{x.GetMetadata("OriginalConfiguration")}={x.GetMetadata("Configuration")}").Distinct()),
-                    platformMap: string.Join(";", projects.Select(x => $"${x.GetMetadata("OriginalPlatform")}={x.GetMetadata("Platform")}").Distinct())
+                    platformMap: string.Join(";", projects.Select(x => $"{x.GetMetadata("OriginalPlatform")}={x.GetMetadata("Platform")}").Distinct())
                 );
         }
         (SlnProject[] projects, Dictionary<string, string> configurationMap, Dictionary<string, string> platformMap) GetProjects(string[] defaultConfigurations, string[] defaultPlatforms)
@@ -136,8 +166,8 @@ namespace MSBuild.SolutionSdk.Tasks
         {
             if (ProjectMetaData != null)
             {
-                var configurations = ProjectMetaData.SelectMany(x => x.GetMetadata("Configurations").Split(';')).Distinct().ToArray();
-                var platforms = ProjectMetaData.SelectMany(x => x.GetMetadata("Platforms").Split(';')).Distinct().ToArray();
+                var configurations = ProjectMetaData.SelectMany(x => ExtractConfigurationsFromProject(x)).Distinct().ToArray();
+                var platforms = ProjectMetaData.SelectMany(x => ExtractPlatformsFromProject(x)).Distinct().ToArray();
                 if (Platforms != null && Platforms.Length != 0)
                 {
                     platforms = Platforms.Select(x => x.ItemSpec).ToArray();

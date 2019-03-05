@@ -24,9 +24,9 @@
     <!-- <Project Remove="**/*.vcxproj">
 
     </Project> -->
-    <!-- <Project Update="**/*.vcxproj" Condition="'$(Platform)' == 'AnyCPU'">
+    <Project Update="**/*.vcxproj" Condition="'$(Platform)' == 'AnyCPU'">
       <Platform>Win32</Platform>
-    </Project> -->
+    </Project>
     <SolutionItem Include="**/*.txt" Exclude="**/obj/**/*.txt;**/bin/**/*.txt">
       <SolutionFolder>sub1/sub2</SolutionFolder>
     </SolutionItem>

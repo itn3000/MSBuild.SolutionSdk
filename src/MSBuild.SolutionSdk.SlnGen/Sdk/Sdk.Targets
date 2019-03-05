@@ -18,7 +18,9 @@
     </Target>
     <Target Name="GetSolutionItems" Returns="@(SolutionItem)">
         <ItemGroup>
-            <SolutionItem Include="@(SolutionItem)"></SolutionItem>
+            <SolutionItems Include="$(MSBuildProjectFullPath)">
+                <SolutionItem>@(SolutionItem)</SolutionItem>
+            </SolutionItems>
         </ItemGroup>
     </Target>
     <Target Name="CollectSolutionItems" Returns="@(_SolutionItem)">
