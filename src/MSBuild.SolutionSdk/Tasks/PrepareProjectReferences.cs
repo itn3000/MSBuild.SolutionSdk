@@ -101,6 +101,8 @@ namespace MSBuild.SolutionSdk.Tasks
                 item.SetMetadata("ProjectGuid", ProjectItem.GetMetadata("ProjectGuid"));
                 item.SetMetadata("ProjectTypeGuid", ProjectItem.GetMetadata("ProjectTypeGuid"));
                 item.SetMetadata("DependsOn", ProjectItem.GetMetadata("DependsOn"));
+                item.SetMetadata("OriginalConfiguration", ProjectItem.GetMetadata("OriginalConfiguration"));
+                item.SetMetadata("OriginalPlatform", ProjectItem.GetMetadata("OriginalPlatform"));
                 return item;
             }
         }

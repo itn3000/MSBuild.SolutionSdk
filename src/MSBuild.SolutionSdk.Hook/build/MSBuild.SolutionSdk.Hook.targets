@@ -12,6 +12,8 @@
         <OutputPath>$(OutputPath)</OutputPath>
         <Configurations>$(Configurations)</Configurations>
         <Platforms>$(Platforms)</Platforms>
+        <OriginalConfiguration>$(OriginalConfiguration)</OriginalConfiguration>
+        <OriginalPlatform>$(OriginalConfiguration)</OriginalPlatform>
       </_ProjectMetadata>
     </ItemGroup>
 

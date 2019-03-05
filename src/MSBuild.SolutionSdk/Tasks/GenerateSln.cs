@@ -38,60 +38,80 @@ namespace MSBuild.SolutionSdk.Tasks
                 .ToDictionary(x => x[0], x => x[1])
                 ;
         }
+        (SlnProject project, string configurationMap, string platformMap) GetProject(ITaskItem[] projects, string[] defaultConfigurations, string[] defaultPlatforms)
+        {
+            Log.LogMessage("arraynum: {0}", projects.Length);
+            foreach(var x in projects)
+            {
+                Log.LogMessage("x: {0}", x.ItemSpec);
+            }
+            var proj = projects.First();
+            var guidString = proj.GetMetadata("ProjectGuid");
+            Guid guid;
+            if (string.IsNullOrEmpty(guidString) || !Guid.TryParse(guidString, out guid))
+            {
+                guid = Guid.NewGuid();
+            }
+            Guid typeguid;
+            var typeguidString = proj.GetMetadata("ProjectTypeGuid");
+            if (string.IsNullOrEmpty(typeguidString) || !Guid.TryParse(typeguidString, out typeguid))
+            {
+                typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
+            }
+            Log.LogMessage("typeguid={0}", typeguid);
+            string[] projectConfigurations;
+            var projectConfigurationString = proj.GetMetadata("Configurations");
+
+            if (!string.IsNullOrEmpty(projectConfigurationString))
+            {
+                projectConfigurations = projectConfigurationString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+            }
+            else
+            {
+                projectConfigurations = defaultConfigurations;
+            }
+            string[] projectPlatforms;
+            var projectPlatformString = proj.GetMetadata("Platforms");
+            if (!string.IsNullOrEmpty(projectPlatformString))
+            {
+                projectPlatforms = projectPlatformString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+            }
+            else
+            {
+                projectPlatforms = defaultPlatforms;
+            }
+            Log.LogMessage("project configurations = {0}", string.Join("|", projectConfigurations));
+            Log.LogMessage("project platforms = {0}", string.Join("|", projectPlatforms));
+            return (project: new SlnProject(
+                proj.GetMetadata("OriginalItemSpec"),
+                Path.GetFileNameWithoutExtension(proj.ItemSpec),
+                guid,
+                typeguid,
+                projectConfigurations,
+                projectPlatforms,
+                false,
+                proj.GetMetadata("SolutionFolder"), proj.GetMetadata("DependsOn")),
+                    configurationMap: string.Join(";", projects.Select(x => $"{x.GetMetadata("OriginalConfiguration")}={x.GetMetadata("Configuration")}").Distinct()),
+                    platformMap: string.Join(";", projects.Select(x => $"${x.GetMetadata("OriginalPlatform")}={x.GetMetadata("Platform")}").Distinct())
+                );
+        }
         (SlnProject[] projects, Dictionary<string, string> configurationMap, Dictionary<string, string> platformMap) GetProjects(string[] defaultConfigurations, string[] defaultPlatforms)
         {
-            var ret = ProjectMetaData.OrderBy(x => int.TryParse(x.GetMetadata("BuildOrder"), out var order) ? order : 0)
-                .Select(proj =>
-                {
-                    var guidString = proj.GetMetadata("ProjectGuid");
-                    Guid guid;
-                    if(string.IsNullOrEmpty(guidString) || !Guid.TryParse(guidString, out guid))
-                    {
-                        guid = Guid.NewGuid();
-                    }
-                    Guid typeguid;
-                    var typeguidString = proj.GetMetadata("ProjectTypeGuid");
-                    if(string.IsNullOrEmpty(typeguidString)|| !Guid.TryParse(typeguidString, out typeguid))
-                    {
-                        typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
-                    }
-                    Log.LogMessage("typeguid={0}", typeguid);
-                    string[] projectConfigurations;
-                    var projectConfigurationString = proj.GetMetadata("Configurations");
+            Log.LogMessage("projmetadata num = {0}", ProjectMetaData.Length);
+            var grp = ProjectMetaData
+                .Where(x => !string.IsNullOrEmpty(x.GetMetadata("Configuration")))
+                .OrderBy(x => x.ItemSpec)
+                .GroupBy(x => x.ItemSpec)
+                .ToDictionary(x => x.Key, x => x.ToArray());
+            Log.LogMessage("grp {0}", grp.Count);
 
-                    if (!string.IsNullOrEmpty(projectConfigurationString))
-                    {
-                        projectConfigurations = projectConfigurationString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
-                    }
-                    else
-                    {
-                        projectConfigurations = defaultConfigurations;
-                    }
-                    string[] projectPlatforms;
-                    var projectPlatformString = proj.GetMetadata("Platforms");
-                    if (!string.IsNullOrEmpty(projectPlatformString))
-                    {
-                        projectPlatforms = projectPlatformString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
-                    }
-                    else
-                    {
-                        projectPlatforms = defaultPlatforms;
-                    }
-                    Log.LogMessage("project configurations = {0}", string.Join("|", projectConfigurations));
-                    Log.LogMessage("project platforms = {0}", string.Join("|", projectPlatforms));
-                    return (project: new SlnProject(
-                        proj.GetMetadata("OriginalItemSpec"),
-                        Path.GetFileNameWithoutExtension(proj.ItemSpec),
-                        guid,
-                        typeguid,
-                        projectConfigurations,
-                        projectPlatforms,
-                        false,
-                        proj.GetMetadata("SolutionFolder"), proj.GetMetadata("DependsOn")), configurationMap: proj.GetMetadata("ConfigurationMap"), platformMap: proj.GetMetadata("PlatformMap")
-                        );
-                });
-            return (projects: ret.Select(x => x.project).ToArray(), 
-                configurationMap: ret.ToDictionary(x => x.project.FullPath, x => x.configurationMap), 
+            // var ret = grp.OrderBy(x => int.TryParse(x.First().GetMetadata("BuildOrder"), out var order) ? order : 0)
+            var ret = grp.Select(kv =>
+                {
+                    return GetProject(kv.Value.ToArray(), defaultConfigurations, defaultPlatforms);
+                }).ToArray();
+            return (projects: ret.Select(x => x.project).ToArray(),
+                configurationMap: ret.ToDictionary(x => x.project.FullPath, x => x.configurationMap),
                 platformMap: ret.ToDictionary(x => x.project.FullPath, x => x.platformMap));
         }
         (SlnItem[], Dictionary<string, SlnFolder>) GetSolutionItems(Dictionary<string, SlnFolder> slnFolders)
@@ -99,7 +119,7 @@ namespace MSBuild.SolutionSdk.Tasks
             return (SolutionItems.Select(x =>
             {
                 string slnFolderName = x.GetMetadata("SolutionFolder");
-                if(string.IsNullOrEmpty(slnFolderName))
+                if (string.IsNullOrEmpty(slnFolderName))
                 {
                     slnFolderName = SlnFolder.SlnFolderDefaultName;
                 }
@@ -132,17 +152,29 @@ namespace MSBuild.SolutionSdk.Tasks
                 var slnFile = new SlnFile("12.0", VisualStudioVersion?.ItemSpec, MinVisualStudioVersion?.ItemSpec, configurations, platforms);
                 var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
                 var (projects, configurationMap, platformMap) = GetProjects(configurations, platforms);
+                foreach(var proj in projects)
+                {
+                    Log.LogMessage("projName = {0}", proj.Name);
+                }
+                foreach(var kv in platformMap)
+                {
+                    Log.LogMessage("{0}={1}", kv.Key, kv.Value);
+                }
+                foreach(var kv in configurationMap)
+                {
+                    Log.LogMessage("{0}={1}", kv.Key, kv.Value);
+                }
                 slnFile.AddProjects(projects);
                 SlnItem[] solutionItems;
                 Dictionary<string, SlnFolder> slnFolders = new Dictionary<string, SlnFolder>();
                 (solutionItems, slnFolders) = GetSolutionItems(slnFolders);
                 slnFile.UpdateSolutionFolder(slnFolders.Values);
                 Log.LogMessage("foldernum is {0}, itemsnum is {1}", slnFolders.Count, solutionItems.Length);
-                foreach(var solutionItem in solutionItems)
+                foreach (var solutionItem in solutionItems)
                 {
                     Log.LogMessage("{0} = {1}, {2}", solutionItem.FullPath, solutionItem.Folder.FolderGuid, solutionItem.Folder.FullPath);
                 }
-                foreach(var slnFolder in slnFolders)
+                foreach (var slnFolder in slnFolders)
                 {
                     Log.LogMessage("{0} = {1}", slnFolder.Key, slnFolder.Value.FolderGuid);
                 }

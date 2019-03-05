@@ -11,6 +11,8 @@
     <Platforms Condition=" '$(Platforms)' == '' ">AnyCPU</Platforms>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SolutionConfigurations>Debug;Release</SolutionConfigurations>
+    <SolutionPlatforms>AnyCPU</SolutionPlatforms>
 
     <EnableDefaultProjectItems Condition="'$(EnableDefaultProjectItems)' == ''">true</EnableDefaultProjectItems>
     <DefaultProjectItemIncludes Condition="'$(DefaultProjectItemIncludes)' == ''">**/*.csproj;**/*.vbproj;**/*.fsproj;**/*.vcxproj</DefaultProjectItemIncludes>
@@ -28,6 +30,11 @@
       <FolderName>Solution Items</FolderName>
     </SolutionItems>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <SolutionConfiguration Include="Debug" Name="Debug"/>
+    <SolutionConfiguration Include="Release" Name="Release"/>
+    <SolutionPlatform Include="AnyCPU" Name="AnyCPU"/>
+  </ItemGroup>
 
   <ItemGroup Condition="'$(EnableDefaultProjectItems)' == 'true'">
     <Project Include="$(DefaultProjectItemIncludes)" Exclude="$(DefaultProjectItemExcludes)" />

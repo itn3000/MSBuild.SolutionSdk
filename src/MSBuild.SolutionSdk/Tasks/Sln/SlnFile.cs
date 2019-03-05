@@ -372,8 +372,9 @@ namespace MSBuild.SolutionSdk.Tasks.Sln
                     {
                         if (!string.IsNullOrWhiteSpace(configuration) && !string.IsNullOrWhiteSpace(platform))
                         {
-                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{globalConfigurationName}|{globalPlatformName}.ActiveCfg = {configuration}|{platform}");
-                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{globalConfigurationName}|{globalPlatformName}.Build.0 = {configuration}|{platform}");
+                            var p = platform != "AnyCPU" ? platform : "Any CPU";
+                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{globalConfigurationName}|{globalPlatformName}.ActiveCfg = {configuration}|{p}");
+                            writer.WriteLine($@"		{project.ProjectGuid.ToSolutionString()}.{globalConfigurationName}|{globalPlatformName}.Build.0 = {configuration}|{p}");
                         }
                     }
                 }
