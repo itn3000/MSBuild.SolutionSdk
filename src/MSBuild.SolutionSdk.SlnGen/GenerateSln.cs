@@ -158,11 +158,11 @@ namespace MSBuild.SolutionSdk.Tasks
                 }
                 foreach(var kv in platformMap)
                 {
-                    Log.LogMessage("{0}={1}", kv.Key, kv.Value);
+                    Log.LogMessage("platformmap = {0}={1}", kv.Key, kv.Value);
                 }
                 foreach(var kv in configurationMap)
                 {
-                    Log.LogMessage("{0}={1}", kv.Key, kv.Value);
+                    Log.LogMessage("configurationmap = {0}={1}", kv.Key, kv.Value);
                 }
                 slnFile.AddProjects(projects);
                 SlnItem[] solutionItems;

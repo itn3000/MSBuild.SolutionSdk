@@ -64,7 +64,7 @@ namespace MSBuild.SolutionSdk.Tasks
                 var supportedPlatforms = projectMetadata
                     .GetMetadata("Platforms")
                     .Split(new [] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-
+                
                 SkipProject =
                     !supportedConfigurations.Contains(ActiveConfiguration, StringComparer.OrdinalIgnoreCase) ||
                     !supportedPlatforms.Contains(ActivePlatform, StringComparer.OrdinalIgnoreCase);

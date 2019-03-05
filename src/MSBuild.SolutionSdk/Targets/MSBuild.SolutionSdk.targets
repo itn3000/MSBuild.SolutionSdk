@@ -64,39 +64,23 @@
         <OutputPath/>
         <Configurations>$(Configurations)</Configurations>
         <Platforms>$(Platforms)</Platforms>
-        <OriginalConfiguration>$(OriginalConfiguration)a</OriginalConfiguration>
+        <Configuration>$(Configuration)</Configuration>
+        <Platform>$(Platform)</Platform>
+        <OriginalConfiguration>$(OriginalConfiguration)</OriginalConfiguration>
         <OriginalPlatform>$(OriginalPlatform)</OriginalPlatform>
+        <ProjectConfiguration>@(ProjectConfiguration)</ProjectConfiguration>
       </_ProjectMetadata>
     </ItemGroup>
   </Target>
 
   <Target Name="EvaluateSln" Returns="@(_ProjectMetadata2)">
     <ItemGroup>
-      <Combined Include="@(SolutionConfiguration)">
-        <Platform>%(SolutionPlatform.Name)</Platform>
-      </Combined>
-    </ItemGroup> 
-    <MSBuild Projects="@(Project)" Targets="GetProjectMetaData" Properties="Configuration=%(Combined.Name);Platform=%(Combined.Platform);OriginalConfiguration=%(Combined.Name);OriginalPlatform=%(Combined.Platform)">
-      <Output TaskParameter="TargetOutputs" ItemName="_ProjectMetadata2" />
-    </MSBuild>
+      <_ProjectMetaData2 Include="@(_ProjectMetaData)">
+        <OriginalConfiguration>$(OriginalConfiguration)</OriginalConfiguration>
+        <OriginalPlatform>$(OriginalPlatform)</OriginalPlatform>
+      </_ProjectMetaData2>
+    </ItemGroup>
     <Message Text="%(_ProjectMetadata2.OriginalItemSpec) , %(_ProjectMetadata2.Configuration):%(_ProjectMetadata2.Platform), %(_ProjectMetadata2.OriginalConfiguration)" Importance="High"/>
   </Target>
-
-  <UsingTask TaskName="MSBuild.SolutionSdk.Tasks.GenerateSln" AssemblyFile="$(SolutionSdkTasksAssembly)"/>
-  <Target Name="SlnGen" DependsOnTargets="EvaluateSln">
-    <GenerateSln
-      ProjectName="$(MSBuildProjectName)"
-      ProjectDirectory="$(MSBuildProjectDirectory)"
-      ProjectMetaData="@(_ProjectMetaData2)"
-      Configurations="$(SolutionConfigurations)"
-      Platforms="$(SolutionPlatforms)"
-      AdditionalProperties="$(AdditionalProperties)"
-      SolutionItems="@(SolutionItem)"
-      VisualStudioVersion="$(VisualStudioVersion)"
-      MinVisualStudioVersion="$(MinVisualStudioVersion)"
-      />
-      
-  </Target>
-
 
 </Project>

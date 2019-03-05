@@ -14,6 +14,7 @@
         <Platforms>$(Platforms)</Platforms>
         <OriginalConfiguration>$(OriginalConfiguration)</OriginalConfiguration>
         <OriginalPlatform>$(OriginalPlatform)</OriginalPlatform>
+        <ProjectConfiguration>@(ProjectConfiguration)</ProjectConfiguration>
       </_ProjectMetadata>
     </ItemGroup>
 

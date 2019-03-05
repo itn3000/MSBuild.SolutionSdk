@@ -21,9 +21,12 @@
     <Project Update="lib2/lib2.csproj">
       <ProjectGuid>{FE0169FD-2B4F-4349-B7F4-77114E693EC0}</ProjectGuid>
     </Project>
-    <Project Update="**/*.vcxproj" Condition="'$(Platform)' == 'AnyCPU'">
+    <!-- <Project Remove="**/*.vcxproj">
+
+    </Project> -->
+    <!-- <Project Update="**/*.vcxproj" Condition="'$(Platform)' == 'AnyCPU'">
       <Platform>Win32</Platform>
-    </Project>
+    </Project> -->
     <SolutionItem Include="**/*.txt" Exclude="**/obj/**/*.txt;**/bin/**/*.txt">
       <SolutionFolder>sub1/sub2</SolutionFolder>
     </SolutionItem>
