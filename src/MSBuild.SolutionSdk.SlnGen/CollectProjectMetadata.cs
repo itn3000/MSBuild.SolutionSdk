@@ -45,7 +45,7 @@ namespace MSBuild.SolutionSdk.Tasks
             item.SetMetadata("SolutionFolder", projectTaskItem.GetMetadataValue("SolutionFolder"));
             item.SetMetadata("Configurations", projectConfigurations);
             item.SetMetadata("Platforms", projectPlatforms);
-            item.SetMetadata("ProjectGuid", projectTaskItem.GetMetadataValue("ProjectGuid"));
+            item.SetMetadata("ProjectGuid", project.GetPropertyValueOrDefault("ProjectGuid", projectTaskItem.GetMetadataValue("ProjectGuid")));
             item.SetMetadata("ProjectTypeGuid", projectTaskItem.GetMetadataValue("ProjectTypeGuid"));
             item.SetMetadata("DependsOn", projectTaskItem.GetMetadataValue("DependsOn"));
             item.SetMetadata("OriginalConfiguration", configuration);
