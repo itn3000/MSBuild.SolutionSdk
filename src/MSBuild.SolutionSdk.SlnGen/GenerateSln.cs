@@ -162,27 +162,10 @@ namespace MSBuild.SolutionSdk.Tasks
                 return new SlnItem(x.ItemSpec, slnFolders[slnFolderName]);
             }).ToArray(), slnFolders);
         }
-        void EvaluateTest(string projectFilePath)
-        {
-            try
-            {
-                var popt = new Microsoft.Build.Definition.ProjectOptions();
-                var project = Microsoft.Build.Evaluation.Project.FromFile(projectFilePath, new Microsoft.Build.Definition.ProjectOptions());
-                foreach (var item in project.Items)
-                {
-                    Log.LogMessage("project itemtype = {0}, item = {1}", item.ItemType, item.EvaluatedInclude);
-                }
-            }
-            catch (Exception e)
-            {
-                Log.LogError("failed to evaluate test:{0}", e);
-            }
-        }
         public override bool Execute()
         {
             if (ProjectMetaData != null)
             {
-                EvaluateTest(ProjectMetaData[0].ItemSpec);
                 var configurations = ProjectMetaData.SelectMany(x => ExtractConfigurationsFromProject(x)).Distinct().ToArray();
                 var platforms = ProjectMetaData.SelectMany(x => ExtractPlatformsFromProject(x)).Distinct().ToArray();
                 if (Platforms != null && Platforms.Length != 0)
