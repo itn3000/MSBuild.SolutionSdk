@@ -41,7 +41,7 @@ namespace MSBuild.SolutionSdk.Tasks
         string[] SplitOrDefault(string str, char[] delim, string[] defaultValues = null)
         {
             defaultValues = defaultValues ?? Array.Empty<string>();
-            if(!string.IsNullOrEmpty(str))
+            if (!string.IsNullOrEmpty(str))
             {
                 return str.Split(delim, StringSplitOptions.RemoveEmptyEntries);
             }
@@ -52,13 +52,13 @@ namespace MSBuild.SolutionSdk.Tasks
         }
         (string[] configurations, string[] platforms) ExtractProjectConfiguration(string projectConfigurationString)
         {
-            var cfgs = SplitOrDefault(projectConfigurationString, new char[]{';'});
+            var cfgs = SplitOrDefault(projectConfigurationString, new char[] { ';' });
             return (cfgs.Select(x => x.Split('|').First()).Distinct().ToArray(), cfgs.Select(x => x.Split('|').Last()).Distinct().ToArray());
         }
         string[] ExtractConfigurationsFromProject(ITaskItem project)
         {
             var ret = SplitOrDefault(project.GetMetadata("Configurations"), new char[] { ';' });
-            if(ret.Length == 0)
+            if (ret.Length == 0)
             {
                 var (cfg, _) = ExtractProjectConfiguration(project.GetMetadata("ProjectConfiguration"));
                 ret = cfg;
@@ -68,7 +68,7 @@ namespace MSBuild.SolutionSdk.Tasks
         string[] ExtractPlatformsFromProject(ITaskItem project)
         {
             var ret = SplitOrDefault(project.GetMetadata("Platforms"), new char[] { ';' });
-            if(ret.Length == 0)
+            if (ret.Length == 0)
             {
                 var (_, p) = ExtractProjectConfiguration(project.GetMetadata("ProjectConfiguration"));
                 ret = p;
@@ -78,7 +78,7 @@ namespace MSBuild.SolutionSdk.Tasks
         (SlnProject project, string configurationMap, string platformMap) GetProject(ITaskItem[] projects, string[] defaultConfigurations, string[] defaultPlatforms)
         {
             Log.LogMessage("arraynum: {0}", projects.Length);
-            foreach(var x in projects)
+            foreach (var x in projects)
             {
                 Log.LogMessage("x: {0}", x.ItemSpec);
             }
@@ -96,17 +96,17 @@ namespace MSBuild.SolutionSdk.Tasks
                 typeguid = SlnProject.GetKnownProjectTypeGuid(Path.GetExtension(proj.ItemSpec), true, new Dictionary<string, Guid>());
             }
             Log.LogMessage("typeguid={0}", typeguid);
-            string[] projectConfigurations = SplitOrDefault(proj.GetMetadata("Configurations"), new char[]{ ';' });
-            string[] projectPlatforms = SplitOrDefault(proj.GetMetadata("Platforms"), new char[]{ ';' });
-            if(!projectPlatforms.Any() && !projectConfigurations.Any())
+            string[] projectConfigurations = SplitOrDefault(proj.GetMetadata("Configurations"), new char[] { ';' });
+            string[] projectPlatforms = SplitOrDefault(proj.GetMetadata("Platforms"), new char[] { ';' });
+            if (!projectPlatforms.Any() && !projectConfigurations.Any())
             {
                 (projectConfigurations, projectPlatforms) = ExtractProjectConfiguration(proj.GetMetadata("ProjectConfiguration"));
             }
-            if(!projectConfigurations.Any())
+            if (!projectConfigurations.Any())
             {
                 projectConfigurations = defaultConfigurations;
             }
-            if(!projectPlatforms.Any())
+            if (!projectPlatforms.Any())
             {
                 projectPlatforms = defaultPlatforms;
             }
@@ -162,10 +162,27 @@ namespace MSBuild.SolutionSdk.Tasks
                 return new SlnItem(x.ItemSpec, slnFolders[slnFolderName]);
             }).ToArray(), slnFolders);
         }
+        void EvaluateTest(string projectFilePath)
+        {
+            try
+            {
+                var popt = new Microsoft.Build.Definition.ProjectOptions();
+                var project = Microsoft.Build.Evaluation.Project.FromFile(projectFilePath, new Microsoft.Build.Definition.ProjectOptions());
+                foreach (var item in project.Items)
+                {
+                    Log.LogMessage("project itemtype = {0}, item = {1}", item.ItemType, item.EvaluatedInclude);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.LogError("failed to evaluate test:{0}", e);
+            }
+        }
         public override bool Execute()
         {
             if (ProjectMetaData != null)
             {
+                EvaluateTest(ProjectMetaData[0].ItemSpec);
                 var configurations = ProjectMetaData.SelectMany(x => ExtractConfigurationsFromProject(x)).Distinct().ToArray();
                 var platforms = ProjectMetaData.SelectMany(x => ExtractPlatformsFromProject(x)).Distinct().ToArray();
                 if (Platforms != null && Platforms.Length != 0)
@@ -182,15 +199,15 @@ namespace MSBuild.SolutionSdk.Tasks
                 var slnFile = new SlnFile("12.0", VisualStudioVersion?.ItemSpec, MinVisualStudioVersion?.ItemSpec, configurations, platforms);
                 var slnFileName = Path.GetFileNameWithoutExtension(ProjectName.ItemSpec) + ".sln";
                 var (projects, configurationMap, platformMap) = GetProjects(configurations, platforms);
-                foreach(var proj in projects)
+                foreach (var proj in projects)
                 {
                     Log.LogMessage("projName = {0}", proj.Name);
                 }
-                foreach(var kv in platformMap)
+                foreach (var kv in platformMap)
                 {
                     Log.LogMessage("platformmap = {0}={1}", kv.Key, kv.Value);
                 }
-                foreach(var kv in configurationMap)
+                foreach (var kv in configurationMap)
                 {
                     Log.LogMessage("configurationmap = {0}={1}", kv.Key, kv.Value);
                 }

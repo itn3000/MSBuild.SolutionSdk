@@ -4,29 +4,21 @@
     </PropertyGroup>
 
     <UsingTask TaskName="GenerateSln" AssemblyFile="$(SlnGenAssemblyFilePath)"/>
+    <UsingTask TaskName="CollectProjectMetadata" AssemblyFile="$(SlnGenAssemblyFilePath)"/>
+    <UsingTask TaskName="CollectSolutionItem" AssemblyFile="$(SlnGenAssemblyFilePath)"/>
     <Target Name="CollectProjectMetadata" Returns="@(_ProjectMetaData)">
-        <ItemGroup>
-            <CombinedConfiguration Include="@(SolutionConfiguration)">
-                <Platform>%(SolutionPlatform.Identity)</Platform>
-            </CombinedConfiguration>
-        </ItemGroup>
-        <MSBuild Projects="@(SlnProj)"
-            Targets="EvaluateSln"
-            Properties="Configuration=%(CombinedConfiguration.Identity);Platform=%(CombinedConfiguration.Platform);OriginalConfiguration=%(CombinedConfiguration.Identity);OriginalPlatform=%(CombinedConfiguration.Platform)">
-            <Output TaskParameter="TargetOutputs" ItemName="_ProjectMetaData"/>
-        </MSBuild>
-    </Target>
-    <Target Name="GetSolutionItems" Returns="@(SolutionItem)">
-        <ItemGroup>
-            <SolutionItems Include="$(MSBuildProjectFullPath)">
-                <SolutionItem>@(SolutionItem)</SolutionItem>
-            </SolutionItems>
-        </ItemGroup>
+        <CollectProjectMetadata
+            SlnProjects="@(SlnProj)"
+            Configurations="@(SolutionConfiguration)"
+            Platforms="@(SolutionPlatform)"
+        >
+            <Output TaskParameter="OutputProjects" ItemName="_ProjectMetaData"/>
+        </CollectProjectMetadata>
     </Target>
     <Target Name="CollectSolutionItems" Returns="@(_SolutionItem)">
-        <MSBuild Projects="@(SlnProj)" Targets="GetSolutionItems" SkipNonexistentTargets="true">
-            <Output TaskParameter="TargetOutputs" ItemName="_SolutionItem"/>
-        </MSBuild>
+        <CollectSolutionItem SlnProjects="@(SlnProj)">
+            <Output TaskParameter="OutputSolutionItems" ItemName="_SolutionItem"/>
+        </CollectSolutionItem>
     </Target>
     <Target Name="SlnGen" DependsOnTargets="CollectProjectMetadata;CollectSolutionItems">
         <GenerateSln
